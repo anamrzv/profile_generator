@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -8,22 +8,32 @@
 </head>
 <body>
   <div class="cv">
-    <aside class="sidebar">
-      <div class="photo-wrap">
+    <header class="header">
+      <div class="name-photo">
         <img src="{{photo}}" alt="photo" class="photo" />
+        <h1 class="name">{{name}}</h1>
       </div>
-      <h1 class="name">{{name}}</h1>
-    </aside>
+    </header>
 
     <main class="content">
       <section class="summary">
         <h2>{{summaryTitle}}</h2>
-        <p>{{intro}}</p>
+        <p>{{summary}}</p>
       </section>
 
-      <section class="details">
-        <h2>{{detailsTitle}}</h2>
-        <p>{{main}}</p>
+      <section class="skills">
+        <h2>{{skillsTitle}}</h2>
+        <p>{{skills}}</p>
+      </section>
+
+      <section class="projects">
+        <h2>{{projectsTitle}}</h2>
+        {{#projects}}
+        <div class="project">
+          <h3 class="project-name">{{name}}</h3>
+          <p class="project-description">{{description}}</p>
+        </div>
+        {{/projects}}
       </section>
     </main>
   </div>

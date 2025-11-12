@@ -1,76 +1,186 @@
-Profile Gen
-=============
+# Profile Generator
 
-Small TypeScript project that can generate a fixed-format CV as an HTML file from inputs (name, photo, intro, main text). It supports:
+A CLI tool and API server to generate professional CVs in PDF or HTML format.
 
-- CLI mode (local) — generate HTML files
-- HTTP API — POST form-data and get back an HTML CV
-- Docker — containerized server via Dockerfile/docker-compose
+## Features
 
-Quick start (local)
--------------------
+- Generate CVs in PDF (default) or HTML format
+- REST API with JSON payload support
+- Customizable CV layout with photo, summary, IT skills, and projects
+- Multi-language support (English and German)
+- Modern, professional design
 
-1. Install and build:
+## Installation
 
 ```bash
 npm install
 npm run build
 ```
 
-2. CLI example:
+## API Usage
+
+### Starting the Server
 
 ```bash
-node dist/index.js --name "Иван Иванов" --photo ./assets/photo.png --intro "Опытный разработчик" --main "Опыт: ..." --out ./out/ivan.html
+npm run serve
 ```
 
-Server (HTTP API)
-------------------
+The server will start on `http://localhost:3000` (or the port specified in the `PORT` environment variable).
 
-The project exposes an API endpoint to generate CVs programmatically.
+### API Endpoints
 
-Start the server locally:
+#### POST /api/generate
+
+Generates a CV in PDF format (default).
+
+**Request Format (JSON):**
+
+```json
+{
+  "name": "John Doe",
+  "summary": "Experienced software developer with 5+ years in full-stack development.",
+  "skills": "JavaScript, TypeScript, React, Node.js, Python, Docker, AWS",
+  "projects": [
+    {
+      "name": "Project Name",
+      "description": "Project description goes here."
+    },
+    {
+      "name": "Another Project",
+      "description": "Another project description."
+    }
+  ],
+  "lang": "en",
+  "photo": "base64_encoded_photo_string"
+}
+```
+
+**Fields:**
+- `name` (required): Full name
+- `summary` (required): Professional summary
+- `skills` (required): IT skills as a comma-separated string or paragraph
+- `projects` (required): Array of project objects with `name` and `description`
+- `lang` (optional): Language code - `en` or `de` (default: `en`)
+- `photo` (optional): Base64-encoded photo
+
+**Response:** PDF file (application/pdf)
+
+#### POST /api/generate/html
+
+Same as above, but generates HTML instead of PDF.
+
+**Response:** HTML file (text/html)
+
+### Example API Call
+
+Using cURL:
 
 ```bash
-node dist/server.js
+# Generate PDF
+curl -X POST http://localhost:3000/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "summary": "Experienced software developer...",
+    "skills": "JavaScript, TypeScript, React, Node.js",
+    "projects": [
+      {
+        "name": "E-commerce Platform",
+        "description": "Developed a scalable platform..."
+      }
+    ],
+    "lang": "en"
+  }' \
+  --output cv.pdf
+
+# Generate HTML
+curl -X POST http://localhost:3000/api/generate/html \
+  -H "Content-Type: application/json" \
+  -d '{...}' \
+  --output cv.html
 ```
 
-API endpoint
+See `test_api.sh` for a complete example with photo encoding.
 
-- URL: POST http://localhost:3000/api/generate
-- Content-Type: multipart/form-data
-- Fields:
-	- `name` (string) — required
-	- `position` (string) — optional (will prepend to `intro`)
-	- `intro` (string) — intro text
-	- `main` (string) — main CV body
-	- `lang` (string) — `en` or `de` (default `en`)
-	- `photo` (file) — image file (jpg/png)
-
-Response: HTML (Content-Type: text/html). The returned HTML contains the photo embedded as a data URL so the response is self-contained.
-
-Example curl request:
+## CLI Usage
 
 ```bash
-curl -X POST \
-	-F "name=Иван Иванов" \
-	-F "position=Senior Developer" \
-	-F "intro=Краткая вводная" \
-	-F "main=Опыт и навыки..." \
-	-F "lang=en" \
-	-F "photo=@assets/photo.png" \
-	http://localhost:3000/api/generate -o out/generated_from_api.html
+npm run dev -- \
+  -n "John Doe" \
+  -p assets/photo.png \
+  -s "Experienced software developer with 5+ years in full-stack development." \
+  -k "JavaScript, TypeScript, React, Node.js, Python" \
+  -j test_projects.json \
+  -o out/cv.pdf \
+  -l en \
+  -f pdf
 ```
 
-Docker
-------
+### CLI Options
 
-You can build and run the server in Docker. A `Dockerfile` and `docker-compose.yml` are included.
+- `-n, --name <string>`: Full name (required)
+- `-p, --photo <path>`: Path to photo file (required)
+- `-s, --summary <string>`: Summary text (required)
+- `-k, --skills <string>`: IT skills (required)
+- `-j, --projects <path>`: Path to JSON file with projects array (required)
+- `-o, --out <path>`: Output file path (default: `./out/cv.pdf`)
+- `-l, --lang <code>`: Language code: en or de (default: `en`)
+- `-f, --format <format>`: Output format: pdf or html (default: `pdf`)
 
-Build and run with Docker Compose:
+### Projects JSON Format
+
+The projects JSON file should contain an array of project objects:
+
+```json
+[
+  {
+    "name": "Project Name",
+    "description": "Project description"
+  },
+  {
+    "name": "Another Project",
+    "description": "Another description"
+  }
+]
+```
+
+See `test_projects.json` for an example.
+
+## CV Format
+
+The generated CV follows this structure:
+
+1. **Header**: Name + Photo
+2. **Summary**: Professional summary/bio
+3. **IT Skills**: Technical skills and competencies
+4. **Projects**: List of projects with names and descriptions
+
+## Docker
+
+Build and run with Docker:
 
 ```bash
-docker compose up --build
+docker-compose up --build
 ```
 
-This exposes the server on port 3000. The compose file mounts `./out` so generated files saved by examples will be visible on the host.
+The API will be available at `http://localhost:3000`.
 
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Build TypeScript
+npm run build
+
+# Run CLI
+npm run dev -- [options]
+
+# Start API server
+npm run serve
+```
+
+## License
+
+MIT

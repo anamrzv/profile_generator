@@ -1,13 +1,21 @@
 import fs from 'fs-extra';
 import mustache from 'mustache';
+import puppeteer from 'puppeteer';
+
+export type Project = {
+  name: string;
+  description: string;
+};
 
 export type CVInput = {
   name: string;
   photo: string; // absolute path
-  intro: string;
-  main: string;
+  summary: string;
+  skills: string;
+  projects: Project[];
   out: string; // absolute path
   lang?: string; // 'en' | 'de'
+  format?: 'pdf' | 'html'; // default: 'pdf'
 };
 
 export async function generateCV(input: CVInput): Promise<void> {
@@ -26,11 +34,13 @@ export async function generateCV(input: CVInput): Promise<void> {
   const locales: Record<string, any> = {
     en: {
       summaryTitle: 'Summary',
-      detailsTitle: 'Experience & Skills'
+      skillsTitle: 'IT Skills',
+      projectsTitle: 'Projects'
     },
     de: {
       summaryTitle: 'Zusammenfassung',
-      detailsTitle: 'Berufserfahrung & Fähigkeiten'
+      skillsTitle: 'IT-Kenntnisse',
+      projectsTitle: 'Projekte'
     }
   };
 
@@ -38,15 +48,40 @@ export async function generateCV(input: CVInput): Promise<void> {
 
   const rendered = mustache.render(template, {
     name: input.name,
-    intro: input.intro,
-    main: input.main,
+    summary: input.summary,
+    skills: input.skills,
+    projects: input.projects,
     photo: photoName,
     style: css,
     summaryTitle: loc.summaryTitle,
-    detailsTitle: loc.detailsTitle
+    skillsTitle: loc.skillsTitle,
+    projectsTitle: loc.projectsTitle
   });
 
-  await fs.writeFile(input.out, rendered, 'utf8');
+  const format = input.format || 'pdf';
+
+  if (format === 'pdf') {
+    // Generate PDF using puppeteer
+    const htmlPath = input.out.replace(/\.pdf$/i, '.html');
+    await fs.writeFile(htmlPath, rendered, 'utf8');
+
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+    await page.goto(`file://${htmlPath}`, { waitUntil: 'networkidle0' });
+    await page.pdf({
+      path: input.out,
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
+    });
+    await browser.close();
+
+    // Optionally remove the temporary HTML file
+    await fs.remove(htmlPath);
+  } else {
+    // Generate HTML
+    await fs.writeFile(input.out, rendered, 'utf8');
+  }
 }
 
 // Render to string without writing files. If photoBuffer is provided, it will be embedded as data URL.
@@ -56,8 +91,16 @@ export async function renderToString(input: Omit<CVInput, 'out'> & { photoBuffer
 
   const lang = (input.lang || 'en').toLowerCase();
   const locales: Record<string, any> = {
-    en: { summaryTitle: 'Summary', detailsTitle: 'Experience & Skills' },
-    de: { summaryTitle: 'Zusammenfassung', detailsTitle: 'Berufserfahrung & Fähigkeiten' }
+    en: { 
+      summaryTitle: 'Summary', 
+      skillsTitle: 'IT Skills',
+      projectsTitle: 'Projects'
+    },
+    de: { 
+      summaryTitle: 'Zusammenfassung', 
+      skillsTitle: 'IT-Kenntnisse',
+      projectsTitle: 'Projekte'
+    }
   };
   const loc = locales[lang] || locales.en;
 
@@ -80,13 +123,29 @@ export async function renderToString(input: Omit<CVInput, 'out'> & { photoBuffer
 
   const rendered = mustache.render(template, {
     name: input.name,
-    intro: input.intro,
-    main: input.main,
+    summary: input.summary,
+    skills: input.skills,
+    projects: input.projects,
     photo: photoRef,
     style: css,
     summaryTitle: loc.summaryTitle,
-    detailsTitle: loc.detailsTitle
+    skillsTitle: loc.skillsTitle,
+    projectsTitle: loc.projectsTitle
   });
 
   return rendered;
+}
+
+// Generate PDF from HTML string
+export async function renderToPDF(html: string): Promise<Buffer> {
+  const browser = await puppeteer.launch({ headless: true });
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: 'networkidle0' });
+  const pdfBuffer = await page.pdf({
+    format: 'A4',
+    printBackground: true,
+    margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
+  });
+  await browser.close();
+  return Buffer.from(pdfBuffer);
 }
