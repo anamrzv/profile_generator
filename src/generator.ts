@@ -70,6 +70,7 @@ export async function generateCV(input: CVInput): Promise<void> {
                 '--no-sandbox',
                 '--disable-setuid-sandbox'
             ],
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
         });
         const page = await browser.newPage();
         await page.goto(`file://${htmlPath}`, { waitUntil: 'networkidle0' });
@@ -148,6 +149,7 @@ export async function renderToPDF(html: string): Promise<Buffer> {
             '--no-sandbox',
             '--disable-setuid-sandbox'
         ],
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
     });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
