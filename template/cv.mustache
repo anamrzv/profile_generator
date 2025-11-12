@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CV - {{name}}</title>
+  <style>{{{style}}}</style>
+</head>
+<body>
+  <div class="cv">
+    <aside class="sidebar">
+      <div class="photo-wrap">
+        <img src="{{photo}}" alt="photo" class="photo" />
+      </div>
+      <h1 class="name">{{name}}</h1>
+    </aside>
+
+    <main class="content">
+      <section class="summary">
+        <h2>{{summaryTitle}}</h2>
+        <p>{{intro}}</p>
+      </section>
+
+      <section class="details">
+        <h2>{{detailsTitle}}</h2>
+        <p>{{main}}</p>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

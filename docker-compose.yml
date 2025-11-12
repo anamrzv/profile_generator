@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  profile-gen:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./out:/app/out
+      - ./assets:/app/assets:ro
+    environment:
+      - NODE_ENV=production

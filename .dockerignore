@@ -1,0 +1,7 @@
+node_modules
+.npm
+dist
+out
+*.log
+**/.git
+**/.DS_Store
