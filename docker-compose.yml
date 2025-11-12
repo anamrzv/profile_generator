@@ -3,9 +3,10 @@ services:
   profile-gen:
     build: .
     ports:
-      - "3000:3000"
+      - "${HOST_PORT:-4000}:${CONTAINER_PORT:-3000}"
     volumes:
       - ./out:/app/out
       - ./assets:/app/assets:ro
     environment:
       - NODE_ENV=production
+      - PORT=${CONTAINER_PORT:-3000}
