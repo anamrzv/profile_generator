@@ -37,7 +37,22 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
       industryKnowHow = body.industryKnowHow;
       itSkills = body.itSkills;
       itTools = body.itTools;
-      projects = body.projects || [];
+      
+      // Normalize projects - handle stringified JSON in arrays (e.g., from n8n)
+      let rawProjects = body.projects || [];
+      if (Array.isArray(rawProjects) && rawProjects.length > 0 && typeof rawProjects[0] === 'string') {
+        // If first element is a string, parse each element
+        projects = rawProjects.map(p => {
+          try {
+            return typeof p === 'string' ? JSON.parse(p) : p;
+          } catch {
+            return null;
+          }
+        }).filter(p => p !== null);
+      } else {
+        projects = rawProjects;
+      }
+      
       lang = body.lang || 'en';
       
       // For JSON, photo should be base64 encoded
@@ -101,7 +116,6 @@ app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
   try {
     let name: string;
     let summary: string;
-    let skills: string | undefined;
     let itSkills: string[] | undefined;
     let itTools: string[] | undefined;
     let education: string[] | undefined;
@@ -118,7 +132,6 @@ app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
       const body = req.body;
       name = body.name || '';
       summary = body.summary || '';
-      skills = body.skills;
       education = body.education;
       methods = body.methods;
       languages = body.languages;
@@ -126,7 +139,22 @@ app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
       industryKnowHow = body.industryKnowHow;
       itSkills = body.itSkills;
       itTools = body.itTools;
-      projects = body.projects || [];
+      
+      // Normalize projects - handle stringified JSON in arrays (e.g., from n8n)
+      let rawProjects = body.projects || [];
+      if (Array.isArray(rawProjects) && rawProjects.length > 0 && typeof rawProjects[0] === 'string') {
+        // If first element is a string, parse each element
+        projects = rawProjects.map(p => {
+          try {
+            return typeof p === 'string' ? JSON.parse(p) : p;
+          } catch {
+            return null;
+          }
+        }).filter(p => p !== null);
+      } else {
+        projects = rawProjects;
+      }
+      
       lang = body.lang || 'en';
       
       if (body.photo) {
@@ -135,7 +163,6 @@ app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
     } else {
       name = (req.body.name || '').toString();
       summary = (req.body.summary || '').toString();
-      skills = req.body.skills ? (req.body.skills).toString() : undefined;
       education = req.body.education ? JSON.parse(req.body.education) : undefined;
       methods = req.body.methods ? JSON.parse(req.body.methods) : undefined;
       languages = req.body.languages ? JSON.parse(req.body.languages) : undefined;
