@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
-import { renderToString, renderToPDF, Project } from './generator';
+import { renderToString, renderToPDF, DetailedProject } from './generator';
 
 const upload = multer();
 const app = express();
@@ -13,8 +13,14 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
   try {
     let name: string;
     let summary: string;
-    let skills: string;
-    let projects: Project[];
+    let itSkills: string[] | undefined;
+    let itTools: string[] | undefined;
+    let education: string[] | undefined;
+    let methods: string[] | undefined;
+    let languages: string[] | undefined;
+    let expertise: string[] | undefined;
+    let industryKnowHow: string[] | undefined;
+    let projects: DetailedProject[];
     let lang: string;
     let photoBuffer: Buffer | undefined;
 
@@ -24,7 +30,13 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
       const body = req.body;
       name = body.name || '';
       summary = body.summary || '';
-      skills = body.skills || '';
+      education = body.education;
+      methods = body.methods;
+      languages = body.languages;
+      expertise = body.expertise;
+      industryKnowHow = body.industryKnowHow;
+      itSkills = body.itSkills;
+      itTools = body.itTools;
       projects = body.projects || [];
       lang = body.lang || 'en';
       
@@ -36,7 +48,13 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
       // Multipart/form-data request
       name = (req.body.name || '').toString();
       summary = (req.body.summary || '').toString();
-      skills = (req.body.skills || '').toString();
+      education = req.body.education ? JSON.parse(req.body.education) : undefined;
+      methods = req.body.methods ? JSON.parse(req.body.methods) : undefined;
+      languages = req.body.languages ? JSON.parse(req.body.languages) : undefined;
+      expertise = req.body.expertise ? JSON.parse(req.body.expertise) : undefined;
+      industryKnowHow = req.body.industryKnowHow ? JSON.parse(req.body.industryKnowHow) : undefined;
+      itSkills = req.body.itSkills ? JSON.parse(req.body.itSkills) : undefined;
+      itTools = req.body.itTools ? JSON.parse(req.body.itTools) : undefined;
       
       // Parse projects from JSON string
       try {
@@ -54,8 +72,14 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
       name, 
       photo: '', 
       summary, 
-      skills, 
-      projects, 
+      itSkills,
+      education,
+      methods,
+      languages,
+      expertise,
+      industryKnowHow,
+      itTools,
+      projects,
       lang, 
       photoBuffer 
     });
@@ -77,8 +101,15 @@ app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
   try {
     let name: string;
     let summary: string;
-    let skills: string;
-    let projects: Project[];
+    let skills: string | undefined;
+    let itSkills: string[] | undefined;
+    let itTools: string[] | undefined;
+    let education: string[] | undefined;
+    let methods: string[] | undefined;
+    let languages: string[] | undefined;
+    let expertise: string[] | undefined;
+    let industryKnowHow: string[] | undefined;
+    let projects: DetailedProject[];
     let lang: string;
     let photoBuffer: Buffer | undefined;
 
@@ -87,7 +118,14 @@ app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
       const body = req.body;
       name = body.name || '';
       summary = body.summary || '';
-      skills = body.skills || '';
+      skills = body.skills;
+      education = body.education;
+      methods = body.methods;
+      languages = body.languages;
+      expertise = body.expertise;
+      industryKnowHow = body.industryKnowHow;
+      itSkills = body.itSkills;
+      itTools = body.itTools;
       projects = body.projects || [];
       lang = body.lang || 'en';
       
@@ -97,7 +135,14 @@ app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
     } else {
       name = (req.body.name || '').toString();
       summary = (req.body.summary || '').toString();
-      skills = (req.body.skills || '').toString();
+      skills = req.body.skills ? (req.body.skills).toString() : undefined;
+      education = req.body.education ? JSON.parse(req.body.education) : undefined;
+      methods = req.body.methods ? JSON.parse(req.body.methods) : undefined;
+      languages = req.body.languages ? JSON.parse(req.body.languages) : undefined;
+      expertise = req.body.expertise ? JSON.parse(req.body.expertise) : undefined;
+      industryKnowHow = req.body.industryKnowHow ? JSON.parse(req.body.industryKnowHow) : undefined;
+      itSkills = req.body.itSkills ? JSON.parse(req.body.itSkills) : undefined;
+      itTools = req.body.itTools ? JSON.parse(req.body.itTools) : undefined;
       
       try {
         projects = JSON.parse(req.body.projects || '[]');
@@ -113,8 +158,14 @@ app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
       name, 
       photo: '', 
       summary, 
-      skills, 
-      projects, 
+      education,
+      methods,
+      languages,
+      expertise,
+      industryKnowHow,
+      itSkills,
+      itTools,
+      projects,
       lang, 
       photoBuffer 
     });

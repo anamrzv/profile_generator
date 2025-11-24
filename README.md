@@ -31,39 +31,67 @@ The server will start on `http://localhost:3000` (or the port specified in the `
 
 #### POST /api/generate
 
-Generates a CV in PDF format (default).
+Generates a CV in PDF format (default). The schema has been extended to support a 2-column first page and detailed multi-page projects. Legacy fields (`skills`, simple `projects` with `description`) remain supported and are auto-mapped.
 
-**Request Format (JSON):**
+**New Schema (JSON):**
 
-```json
+```jsonc
 {
   "name": "John Doe",
-  "summary": "Experienced software developer with 5+ years in full-stack development.",
-  "skills": "JavaScript, TypeScript, React, Node.js, Python, Docker, AWS",
+  "photo": "<base64>",                // Optional base64 photo
+  "summary": "Software Engineer 5+ years...",
+  "education": ["B.Sc. Computer Science", "M.Sc. Data Engineering"],
+  "methods": ["Scrum", "Agile Software Engineering"],
+  "languages": ["English (C1)", "German (B2)", "Spanish (A2)"],
+  "expertise": ["Backend Development", "Cloud Deployment", "Database Modeling"],
+  "industryKnowHow": ["Oil & Gas", "Healthcare", "Enterprise Software"],
+  "itSkills": ["TypeScript", "Java", "Python", "C#", "SQL"],
+  "itTools": ["Jira/Confluence", "SAP BTP", "Docker", "GitHub Actions"],
   "projects": [
     {
-      "name": "Project Name",
-      "description": "Project description goes here."
-    },
-    {
-      "name": "Another Project",
-      "description": "Another project description."
+      "timeRange": "12/2024 – Present",
+      "name": "Developing SAP applications",
+      "industry": "SAP",
+      "duration": "Ongoing",
+      "role": "SAP Cloud Native Developer",
+      "coreBusinessTopics": ["Custom SAP applications", "Front-end/back-end integration"],
+      "projectMethods": ["Scrum", "Agile Software Engineering"],
+      "tools": ["SAP BTP", "SAP Fiori", "OData", "Node.js", "CDS"],
+      "achievements": [
+        "Developed SAP applications using Fiori, OData, and SAP BTP for enterprise business needs",
+        "Prototyped custom solutions to meet specific customer requirements",
+        "Configured user authentication via SAP IAS",
+        "Developed OData services for front-end interaction with databases",
+        "Researched and implemented solutions for unique SAP customer scenarios"
+      ]
     }
   ],
-  "lang": "en",
-  "photo": "base64_encoded_photo_string"
+  "lang": "en"
 }
 ```
 
-**Fields:**
-- `name` (required): Full name
-- `summary` (required): Professional summary
-- `skills` (required): IT skills as a comma-separated string or paragraph
-- `projects` (required): Array of project objects with `name` and `description`
-- `lang` (optional): Language code - `en` or `de` (default: `en`)
-- `photo` (optional): Base64-encoded photo
+**Field Descriptions:**
+- `education`: Array of education entries (simple strings).
+- `methods`: Array of methodologies practiced (global list).
+- `languages`: Human languages with proficiency.
+- `expertise`: High-level areas of expertise (tags).
+- `industryKnowHow`: Industry domains experienced in.
+- `itSkills`: Programming languages / frameworks / core technical skills.
+- `itTools`: Tooling platforms and products.
+- `projects[]`: Detailed project pages (one page per project). Each supports:
+  - `timeRange`: Date range text.
+  - `industry`, `duration`, `role`: Meta descriptors.
+  - `coreBusinessTopics`: Business topic tags.
+  - `projectMethods`: Methods used specifically in this project.
+  - `tools`: Technology / tools for this project.
+  - `achievements`: Bullet list of accomplishments.
+  - `description` (legacy): If provided and `achievements` absent, split by newline into achievements.
 
-**Response:** PDF file (application/pdf)
+**Legacy Compatibility:**
+- `skills` (string) is auto-split by comma/semicolon into `itSkills` if `itSkills` not provided.
+- Legacy `projects` items with only `name` + `description` are converted: description lines -> achievements.
+
+**Response:** PDF file (application/pdf).
 
 #### POST /api/generate/html
 
@@ -76,27 +104,34 @@ Same as above, but generates HTML instead of PDF.
 Using cURL:
 
 ```bash
-# Generate PDF
 curl -X POST http://localhost:3000/api/generate \
   -H "Content-Type: application/json" \
   -d '{
     "name": "John Doe",
-    "summary": "Experienced software developer...",
-    "skills": "JavaScript, TypeScript, React, Node.js",
+    "summary": "Software Engineer 5+ years...",
+    "education": ["B.Sc. Computer Science"],
+    "methods": ["Scrum"],
+    "languages": ["English (C1)"],
+    "expertise": ["Backend Development"],
+    "industryKnowHow": ["Healthcare"],
+    "itSkills": ["TypeScript", "Node.js"],
+    "itTools": ["Docker"],
     "projects": [
       {
-        "name": "E-commerce Platform",
-        "description": "Developed a scalable platform..."
+        "timeRange": "2024 – Present",
+        "name": "Platform Modernization",
+        "role": "Lead Developer",
+        "achievements": ["Led modernization initiative", "Reduced deployment time 40%"]
       }
     ],
     "lang": "en"
   }' \
   --output cv.pdf
 
-# Generate HTML
+# HTML output
 curl -X POST http://localhost:3000/api/generate/html \
   -H "Content-Type: application/json" \
-  -d '{...}' \
+  -d '{"name":"John Doe","summary":"...","projects":[{"name":"Proj","description":"Line1\nLine2"}]}' \
   --output cv.html
 ```
 
@@ -127,33 +162,34 @@ npm run dev -- \
 - `-l, --lang <code>`: Language code: en or de (default: `en`)
 - `-f, --format <format>`: Output format: pdf or html (default: `pdf`)
 
-### Projects JSON Format
+### Projects JSON Format (Extended)
 
-The projects JSON file should contain an array of project objects:
+CLI currently expects a path (`-j`) to a JSON file containing an array of project objects matching either the legacy or extended schema. Example extended file:
 
 ```json
 [
   {
-    "name": "Project Name",
-    "description": "Project description"
-  },
-  {
-    "name": "Another Project",
-    "description": "Another description"
+    "timeRange": "12/2024 – Present",
+    "name": "Developing SAP applications",
+    "industry": "SAP",
+    "role": "SAP Cloud Native Developer",
+    "achievements": [
+      "Developed SAP applications using Fiori, OData, and SAP BTP",
+      "Configured user authentication via SAP IAS"
+    ]
   }
 ]
 ```
-
-See `test_projects.json` for an example.
 
 ## CV Format
 
 The generated CV follows this structure:
 
 1. **Header**: Name + Photo
-2. **Summary**: Professional summary/bio
-3. **IT Skills**: Technical skills and competencies
-4. **Projects**: List of projects with names and descriptions
+2. **Two-Column Overview**:
+  - Left (narrow): Education, Methods, Languages
+  - Right (wide): Summary, Areas of Expertise, Industry Know-How, IT Skills, IT Tools
+3. **Projects**: Each on its own page with meta rows and achievements bullets
 
 ## Docker
 

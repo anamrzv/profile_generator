@@ -2,93 +2,34 @@ import fs from 'fs-extra';
 import mustache from 'mustache';
 import puppeteer from 'puppeteer';
 
-export type Project = {
+export type DetailedProject = {
+    timeRange?: string; // e.g. "12/2024 – Present"
     name: string;
-    description: string;
+    industry?: string;
+    duration?: string; // e.g. "Ongoing", "6 months"
+    role?: string;
+    coreBusinessTopics?: string[];
+    projectMethods?: string[]; // methods used in the project (to avoid collision with global methods)
+    tools?: string[]; // technology/tools list
+    achievements?: string[]; // bullet points
 };
 
 export type CVInput = {
     name: string;
     photo: string; // absolute path
-    summary: string;
-    skills: string;
-    projects: Project[];
+    summary?: string;
+    education?: string[];
+    methods?: string[];
+    languages?: string[];
+    expertise?: string[];
+    industryKnowHow?: string[];
+    itSkills?: string[]; // technical skills tags
+    itTools?: string[]; // tools tags
+    projects: DetailedProject[];
     out: string; // absolute path
     lang?: string; // 'en' | 'de'
     format?: 'pdf' | 'html'; // default: 'pdf'
 };
-
-export async function generateCV(input: CVInput): Promise<void> {
-    await fs.ensureDir(require('path').dirname(input.out));
-
-    const template = await fs.readFile(require('path').join(__dirname, '..', 'template', 'cv.mustache'), 'utf8');
-    const css = await fs.readFile(require('path').join(__dirname, '..', 'template', 'style.css'), 'utf8');
-
-    // Copy photo into same folder as output (as photo.ext)
-    const outDir = require('path').dirname(input.out);
-    const photoName = 'photo' + require('path').extname(input.photo);
-    const destPhoto = require('path').join(outDir, photoName);
-    await fs.copyFile(input.photo, destPhoto);
-
-    const lang = (input.lang || 'en').toLowerCase();
-    const locales: Record<string, any> = {
-        en: {
-            summaryTitle: 'Summary',
-            skillsTitle: 'IT Skills',
-            projectsTitle: 'Projects'
-        },
-        de: {
-            summaryTitle: 'Zusammenfassung',
-            skillsTitle: 'IT-Kenntnisse',
-            projectsTitle: 'Projekte'
-        }
-    };
-
-    const loc = locales[lang] || locales.en;
-
-    const rendered = mustache.render(template, {
-        name: input.name,
-        summary: input.summary,
-        skills: input.skills,
-        projects: input.projects,
-        photo: photoName,
-        style: css,
-        summaryTitle: loc.summaryTitle,
-        skillsTitle: loc.skillsTitle,
-        projectsTitle: loc.projectsTitle
-    });
-
-    const format = input.format || 'pdf';
-
-    if (format === 'pdf') {
-        // Generate PDF using puppeteer
-        const htmlPath = input.out.replace(/\.pdf$/i, '.html');
-        await fs.writeFile(htmlPath, rendered, 'utf8');
-
-        const browser = await puppeteer.launch({
-            headless: true, args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox'
-            ],
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
-        });
-        const page = await browser.newPage();
-        await page.goto(`file://${htmlPath}`, { waitUntil: 'networkidle0' });
-        await page.pdf({
-            path: input.out,
-            format: 'A4',
-            printBackground: true,
-            margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
-        });
-        await browser.close();
-
-        // Optionally remove the temporary HTML file
-        await fs.remove(htmlPath);
-    } else {
-        // Generate HTML
-        await fs.writeFile(input.out, rendered, 'utf8');
-    }
-}
 
 // Render to string without writing files. If photoBuffer is provided, it will be embedded as data URL.
 export async function renderToString(input: Omit<CVInput, 'out'> & { photoBuffer?: Buffer }): Promise<string> {
@@ -99,13 +40,37 @@ export async function renderToString(input: Omit<CVInput, 'out'> & { photoBuffer
     const locales: Record<string, any> = {
         en: {
             summaryTitle: 'Summary',
-            skillsTitle: 'IT Skills',
-            projectsTitle: 'Projects'
+            educationTitle: 'Education',
+            methodsTitle: 'Methods',
+            languagesTitle: 'Languages',
+            expertiseTitle: 'Areas of Expertise',
+            industryKnowHowTitle: 'Industry Know-How',
+            itSkillsTitle: 'IT Skills',
+            itToolsTitle: 'IT Tools',
+            projectsTitle: 'Projects',
+            industryTitle: 'Industry',
+            durationTitle: 'Duration',
+            roleTitle: 'Role',
+            coreBusinessTopicsTitle: 'Core Business Topics',
+            toolsTitle: 'Technology/Tools',
+            achievementsTitle: 'Achievements'
         },
         de: {
             summaryTitle: 'Zusammenfassung',
-            skillsTitle: 'IT-Kenntnisse',
-            projectsTitle: 'Projekte'
+            educationTitle: 'Ausbildung',
+            methodsTitle: 'Methoden',
+            languagesTitle: 'Sprachen',
+            expertiseTitle: 'Expertise',
+            industryKnowHowTitle: 'Branchen-Know-how',
+            itSkillsTitle: 'IT-Kenntnisse',
+            itToolsTitle: 'IT-Werkzeuge',
+            projectsTitle: 'Projekte',
+            industryTitle: 'Branche',
+            durationTitle: 'Dauer',
+            roleTitle: 'Rolle',
+            coreBusinessTopicsTitle: 'Geschäftsthemen',
+            toolsTitle: 'Technologien/Werkzeuge',
+            achievementsTitle: 'Erfolge'
         }
     };
     const loc = locales[lang] || locales.en;
@@ -127,16 +92,56 @@ export async function renderToString(input: Omit<CVInput, 'out'> & { photoBuffer
         }
     }
 
+    const itSkills = input.itSkills;
+    const normalizedProjects = (input.projects || []).map(p => {
+        const achievements = p.achievements && p.achievements.length > 0
+            ? p.achievements
+            : [];
+        return { 
+            ...p, 
+            achievements,
+            hasAchievements: achievements && achievements.length > 0,
+            hasCoreBusinessTopics: p.coreBusinessTopics && p.coreBusinessTopics.length > 0,
+            hasProjectMethods: p.projectMethods && p.projectMethods.length > 0,
+            hasTools: p.tools && p.tools.length > 0
+        };
+    });
+
     const rendered = mustache.render(template, {
         name: input.name,
         summary: input.summary,
-        skills: input.skills,
-        projects: input.projects,
+        education: input.education,
+        methods: input.methods,
+        languages: input.languages,
+        expertise: input.expertise,
+        industryKnowHow: input.industryKnowHow,
+        itSkills,
+        itTools: input.itTools,
+        projects: normalizedProjects,
         photo: photoRef,
         style: css,
+        hasEducation: input.education && input.education.length > 0,
+        hasMethods: input.methods && input.methods.length > 0,
+        hasLanguages: input.languages && input.languages.length > 0,
+        hasExpertise: input.expertise && input.expertise.length > 0,
+        hasIndustryKnowHow: input.industryKnowHow && input.industryKnowHow.length > 0,
+        hasItSkills: itSkills && itSkills.length > 0,
+        hasItTools: input.itTools && input.itTools.length > 0,
         summaryTitle: loc.summaryTitle,
-        skillsTitle: loc.skillsTitle,
-        projectsTitle: loc.projectsTitle
+        educationTitle: loc.educationTitle,
+        methodsTitle: loc.methodsTitle,
+        languagesTitle: loc.languagesTitle,
+        expertiseTitle: loc.expertiseTitle,
+        industryKnowHowTitle: loc.industryKnowHowTitle,
+        itSkillsTitle: loc.itSkillsTitle,
+        itToolsTitle: loc.itToolsTitle,
+        projectsTitle: loc.projectsTitle,
+        industryTitle: loc.industryTitle,
+        durationTitle: loc.durationTitle,
+        roleTitle: loc.roleTitle,
+        coreBusinessTopicsTitle: loc.coreBusinessTopicsTitle,
+        toolsTitle: loc.toolsTitle,
+        achievementsTitle: loc.achievementsTitle
     });
 
     return rendered;

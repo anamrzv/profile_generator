@@ -8,34 +8,106 @@
 </head>
 <body>
   <div class="cv">
-    <header class="header">
-      <div class="name-photo">
-        <img src="{{photo}}" alt="photo" class="photo" />
-        <h1 class="name">{{name}}</h1>
-      </div>
-    </header>
-
-    <main class="content">
-      <section class="summary">
-        <h2>{{summaryTitle}}</h2>
-        <p>{{summary}}</p>
-      </section>
-
-      <section class="skills">
-        <h2>{{skillsTitle}}</h2>
-        <p>{{skills}}</p>
-      </section>
-
-      <section class="projects">
-        <h2>{{projectsTitle}}</h2>
-        {{#projects}}
-        <div class="project">
-          <h3 class="project-name">{{name}}</h3>
-          <p class="project-description">{{description}}</p>
+    <div class="page first-page">
+      <header class="header">
+        <div class="name-photo">
+          <img src="{{photo}}" alt="photo" class="photo" />
+          <h1 class="name">{{name}}</h1>
         </div>
-        {{/projects}}
+      </header>
+      <main class="content two-column">
+        <aside class="left-column">
+          {{#hasEducation}}
+          <section class="education">
+            <h2>{{educationTitle}}</h2>
+            <ul>
+              {{#education}}<li>{{.}}</li>{{/education}}
+            </ul>
+          </section>
+          {{/hasEducation}}
+          {{#hasMethods}}
+          <section class="methods">
+            <h2>{{methodsTitle}}</h2>
+            <ul>
+              {{#methods}}<li>{{.}}</li>{{/methods}}
+            </ul>
+          </section>
+          {{/hasMethods}}
+          {{#hasLanguages}}
+          <section class="languages">
+            <h2>{{languagesTitle}}</h2>
+            <ul>
+              {{#languages}}<li>{{.}}</li>{{/languages}}
+            </ul>
+          </section>
+          {{/hasLanguages}}
+        </aside>
+        <div class="right-column">
+          {{#summary}}
+          <section class="summary">
+            <h2>{{summaryTitle}}</h2>
+            <p>{{summary}}</p>
+          </section>
+          {{/summary}}
+          {{#hasExpertise}}
+          <section class="expertise">
+            <h2>{{expertiseTitle}}</h2>
+            <ul class="tag-list">
+              {{#expertise}}<li>{{.}}</li>{{/expertise}}
+            </ul>
+          </section>
+          {{/hasExpertise}}
+          {{#hasIndustryKnowHow}}
+          <section class="industry-know-how">
+            <h2>{{industryKnowHowTitle}}</h2>
+            <ul class="tag-list">
+              {{#industryKnowHow}}<li>{{.}}</li>{{/industryKnowHow}}
+            </ul>
+          </section>
+          {{/hasIndustryKnowHow}}
+          {{#hasItSkills}}
+          <section class="it-skills">
+            <h2>{{itSkillsTitle}}</h2>
+            <ul class="tag-list">
+              {{#itSkills}}<li>{{.}}</li>{{/itSkills}}
+            </ul>
+          </section>
+          {{/hasItSkills}}
+          {{#hasItTools}}
+          <section class="it-tools">
+            <h2>{{itToolsTitle}}</h2>
+            <ul class="tag-list">
+              {{#itTools}}<li>{{.}}</li>{{/itTools}}
+            </ul>
+          </section>
+          {{/hasItTools}}
+        </div>
+      </main>
+    </div>
+
+    {{#projects}}
+    <div class="page project-page page-break">
+      <section class="project-header">
+        <h2 class="project-title">{{timeRange}} | {{name}}</h2>
+        <div class="project-meta">
+          {{#industry}}<div><span class="meta-label">{{industryTitle}}:</span> {{industry}}</div>{{/industry}}
+          {{#duration}}<div><span class="meta-label">{{durationTitle}}:</span> {{duration}}</div>{{/duration}}
+          {{#role}}<div><span class="meta-label">{{roleTitle}}:</span> {{role}}</div>{{/role}}
+          {{#hasCoreBusinessTopics}}<div><span class="meta-label">{{coreBusinessTopicsTitle}}:</span> {{#coreBusinessTopics}}<span class="chip">{{.}}</span>{{/coreBusinessTopics}}</div>{{/hasCoreBusinessTopics}}
+          {{#hasProjectMethods}}<div><span class="meta-label">{{methodsTitle}}:</span> {{#projectMethods}}<span class="chip">{{.}}</span>{{/projectMethods}}</div>{{/hasProjectMethods}}
+          {{#hasTools}}<div><span class="meta-label">{{toolsTitle}}:</span> {{#tools}}<span class="chip">{{.}}</span>{{/tools}}</div>{{/hasTools}}
+        </div>
       </section>
-    </main>
+      {{#hasAchievements}}
+      <section class="achievements">
+        <h3 class="achievements-title">{{achievementsTitle}}</h3>
+        <ul class="bullet-list">
+          {{#achievements}}<li>{{.}}</li>{{/achievements}}
+        </ul>
+      </section>
+      {{/hasAchievements}}
+    </div>
+    {{/projects}}
   </div>
 </body>
 </html>

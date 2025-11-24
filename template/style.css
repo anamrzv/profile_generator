@@ -43,12 +43,36 @@ body {
   font-weight: bold;
 }
 
-.content {
-  padding: 40px;
+/* Pages */
+.page {
+  padding: 0 40px 40px 40px;
+}
+
+.first-page .content {
+  padding-top: 20px;
+}
+
+.two-column {
+  display: flex;
+  gap: 40px;
+}
+
+.left-column {
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.right-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 section {
-  margin-bottom: 30px;
+  margin-bottom: 16px;
 }
 
 section:last-child {
@@ -57,15 +81,16 @@ section:last-child {
 
 h2 {
   color: #2c3e50;
-  font-size: 1.8em;
+  font-size: 1.3em;
   margin-bottom: 15px;
-  border-bottom: 2px solid #3498db;
-  padding-bottom: 10px;
+  border-bottom: 2px solid #1d3557;
+  padding-bottom: 6px;
+  letter-spacing: 0.5px;
 }
 
 h3 {
   color: #34495e;
-  font-size: 1.3em;
+  font-size: 1em;
   margin-bottom: 8px;
 }
 
@@ -74,24 +99,30 @@ p {
   margin-bottom: 10px;
 }
 
-.project {
-  margin-bottom: 25px;
-  padding-left: 20px;
-  border-left: 3px solid #3498db;
-}
+ul { list-style: none; padding-left: 0; }
+ul li { margin-bottom: 6px; color: #222; }
+ul.tag-list { display: flex; flex-wrap: wrap; gap: 10px 28px; }
+ul.tag-list li { margin-bottom: 4px; white-space: nowrap; }
 
-.project:last-child {
-  margin-bottom: 0;
-}
+.chip { display: inline-block; margin: 0 6px 6px 0; background: #eef4ff; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; color: #1d3557; }
 
-.project-name {
-  color: #2c3e50;
+.project-page { 
+  padding-top: 40px;
+  page-break-inside: avoid;
 }
+.project-header { margin-bottom: 22px; }
+.project-title { font-size: 1.6rem; color: #1d3557; margin-bottom: 18px; border-bottom: 2px solid #1d3557; padding-bottom: 6px; }
+.project-meta { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; }
+.meta-label { font-weight: 600; color: #1d3557; }
 
-.project-description {
-  color: #666;
-  line-height: 1.7;
-}
+.achievements-title { font-size: 1.1rem; margin-bottom: 10px; color: #1d3557; }
+.bullet-list { list-style: disc; padding-left: 20px; }
+.bullet-list li { margin-bottom: 10px; line-height: 1.4; }
+
+.header { background: #2c3e50; color: white; padding: 30px 40px; }
+.name { font-size: 2.2em; }
+
+@page { margin: 0; }
 
 @media print {
   body {
