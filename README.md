@@ -31,7 +31,7 @@ The server will start on `http://localhost:3000` (or the port specified in the `
 
 #### POST /api/generate
 
-Generates a CV in PDF format (default). The schema has been extended to support a 2-column first page and detailed multi-page projects. Legacy fields (`skills`, simple `projects` with `description`) remain supported and are auto-mapped.
+mGenerates a CV in PDF format (default). The schema has been extended to support a 2-column first page and detailed multi-page projects. Legacy fields (`skills`, simple `projects` with `description`) remain supported and are auto-mapped.
 
 **New Schema (JSON):**
 

@@ -7,11 +7,12 @@
 PHOTO_BASE64=$(base64 -i assets/photo.png)
 
 
-curl -X POST http://localhost:3000/api/generate \
+curl -X POST http://localhost:3000/api/generate/html \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "John Doe",
-    "summary": "Software Engineer 5+ years experience in backend development and cloud computing. Passionate about building scalable applications and learning new technologies.",
+    "name": "Anna Munoz",
+    "title": "SAP Cloud Native Developer",
+    "summary": "Software Engineer 3+ years of experience delivering enterprise and SAP solutions. Passionate about building scalable applications and learning new technologies.",
     "education": ["B.Sc. Computer Science"],
     "methods": ["Scrum", "Kanban", "TDD", "CI/CD"],
     "languages": ["English (C1)", "German (B2)"],
@@ -46,4 +47,4 @@ curl -X POST http://localhost:3000/api/generate \
     "lang": "en",
     "photo": "'"$PHOTO_BASE64"'"
   }' \
-  --output cv.pdf
+  --output cv.html

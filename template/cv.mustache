@@ -10,9 +10,14 @@
   <div class="cv">
     <div class="page first-page">
       <header class="header">
-        <div class="name-photo">
+        <div class="header-container">
           <img src="{{photo}}" alt="photo" class="photo" />
-          <h1 class="name">{{name}}</h1>
+          <div class="name-bar">
+            <div class="name-title-wrapper">
+              <h1 class="name">{{name}}</h1>
+              {{#title}}<p class="title">{{title}}</p>{{/title}}
+            </div>
+          </div>
         </div>
       </header>
       <main class="content two-column">

@@ -16,7 +16,8 @@ export type DetailedProject = {
 
 export type CVInput = {
     name: string;
-    photo: string; // absolute path
+    photo: Buffer; // binary photo data (JPEG or PNG)
+    title?: string; // job title / должность
     summary?: string;
     education?: string[];
     methods?: string[];
@@ -31,8 +32,8 @@ export type CVInput = {
     format?: 'pdf' | 'html'; // default: 'pdf'
 };
 
-// Render to string without writing files. If photoBuffer is provided, it will be embedded as data URL.
-export async function renderToString(input: Omit<CVInput, 'out'> & { photoBuffer?: Buffer }): Promise<string> {
+// Render to string without writing files. Photo is expected as binary Buffer data.
+export async function renderToString(input: Omit<CVInput, 'out'>): Promise<string> {
     const template = await fs.readFile(require('path').join(__dirname, '..', 'template', 'cv.mustache'), 'utf8');
     const css = await fs.readFile(require('path').join(__dirname, '..', 'template', 'style.css'), 'utf8');
 
@@ -53,7 +54,7 @@ export async function renderToString(input: Omit<CVInput, 'out'> & { photoBuffer
             roleTitle: 'Role',
             coreBusinessTopicsTitle: 'Core Business Topics',
             toolsTitle: 'Technology/Tools',
-            achievementsTitle: 'Achievements'
+            achievementsTitle: 'Achievements:'
         },
         de: {
             summaryTitle: 'Zusammenfassung',
@@ -70,26 +71,17 @@ export async function renderToString(input: Omit<CVInput, 'out'> & { photoBuffer
             roleTitle: 'Rolle',
             coreBusinessTopicsTitle: 'Geschäftsthemen',
             toolsTitle: 'Technologien/Werkzeuge',
-            achievementsTitle: 'Erfolge'
+            achievementsTitle: 'Erfolge:'
         }
     };
     const loc = locales[lang] || locales.en;
 
     let photoRef = '';
-    if (input.photoBuffer) {
-        // default PNG data URL
-        const b64 = input.photoBuffer.toString('base64');
-        photoRef = `data:image/png;base64,${b64}`;
-    } else {
-        // treat input.photo as path — try to read and convert to data URL
-        try {
-            const data = await fs.readFile(input.photo);
-            const ext = require('path').extname(input.photo).slice(1) || 'png';
-            photoRef = `data:image/${ext};base64,${data.toString('base64')}`;
-        } catch (e) {
-            // fallback to empty
-            photoRef = '';
-        }
+    if (input.photo) {
+        // Embed binary photo as data URL (detect format from buffer magic bytes)
+        const b64 = input.photo.toString('base64');
+        const mimeType = detectMimeType(input.photo);
+        photoRef = `data:${mimeType};base64,${b64}`;
     }
 
     const itSkills = input.itSkills;
@@ -145,6 +137,26 @@ export async function renderToString(input: Omit<CVInput, 'out'> & { photoBuffer
     });
 
     return rendered;
+}
+
+// Detect MIME type from buffer magic bytes
+function detectMimeType(buffer: Buffer): string {
+    if (buffer.length < 4) {
+        return 'image/png'; // default fallback
+    }
+    
+    // Check for JPEG magic bytes (FF D8 FF)
+    if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+        return 'image/jpeg';
+    }
+    
+    // Check for PNG magic bytes (89 50 4E 47)
+    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+        return 'image/png';
+    }
+    
+    // Default to PNG if unknown
+    return 'image/png';
 }
 
 // Generate PDF from HTML string

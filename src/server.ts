@@ -6,12 +6,14 @@ import { renderToString, renderToPDF, DetailedProject } from './generator';
 const upload = multer();
 const app = express();
 app.use(cors());
-app.use(express.json()); // Add JSON body parser
+app.use(express.json({ limit: '50mb' })); // Increase limit for binary photo data
+app.use(express.urlencoded({ limit: '50mb' }));
 
 // New JSON API endpoint
 app.post('/api/generate', upload.single('photo'), async (req, res) => {
   try {
     let name: string;
+    let title: string | undefined;
     let summary: string;
     let itSkills: string[] | undefined;
     let itTools: string[] | undefined;
@@ -29,6 +31,7 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
       // JSON request
       const body = req.body;
       name = body.name || '';
+      title = body.title;
       summary = body.summary || '';
       education = body.education;
       methods = body.methods;
@@ -62,6 +65,7 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
     } else {
       // Multipart/form-data request
       name = (req.body.name || '').toString();
+      title = req.body.title ? (req.body.title || '').toString() : undefined;
       summary = (req.body.summary || '').toString();
       education = req.body.education ? JSON.parse(req.body.education) : undefined;
       methods = req.body.methods ? JSON.parse(req.body.methods) : undefined;
@@ -83,9 +87,15 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
     }
 
     // Generate HTML
+    if (!photoBuffer) {
+      res.status(400).json({ error: 'Photo is required' });
+      return;
+    }
+
     const html = await renderToString({ 
       name, 
-      photo: '', 
+      title,
+      photo: photoBuffer, 
       summary, 
       itSkills,
       education,
@@ -95,8 +105,7 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
       industryKnowHow,
       itTools,
       projects,
-      lang, 
-      photoBuffer 
+      lang
     });
 
     // Generate PDF by default
@@ -115,6 +124,7 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
 app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
   try {
     let name: string;
+    let title: string | undefined;
     let summary: string;
     let itSkills: string[] | undefined;
     let itTools: string[] | undefined;
@@ -131,6 +141,7 @@ app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
     if (req.is('application/json')) {
       const body = req.body;
       name = body.name || '';
+      title = body.title;
       summary = body.summary || '';
       education = body.education;
       methods = body.methods;
@@ -162,6 +173,7 @@ app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
       }
     } else {
       name = (req.body.name || '').toString();
+      title = req.body.title ? (req.body.title || '').toString() : undefined;
       summary = (req.body.summary || '').toString();
       education = req.body.education ? JSON.parse(req.body.education) : undefined;
       methods = req.body.methods ? JSON.parse(req.body.methods) : undefined;
@@ -181,9 +193,16 @@ app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
       photoBuffer = req.file?.buffer;
     }
 
+    // Generate HTML
+    if (!photoBuffer) {
+      res.status(400).json({ error: 'Photo is required' });
+      return;
+    }
+
     const html = await renderToString({ 
       name, 
-      photo: '', 
+      title,
+      photo: photoBuffer, 
       summary, 
       education,
       methods,
@@ -193,8 +212,7 @@ app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
       itSkills,
       itTools,
       projects,
-      lang, 
-      photoBuffer 
+      lang
     });
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
