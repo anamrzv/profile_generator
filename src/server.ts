@@ -6,8 +6,8 @@ import { renderToString, renderToPDF, DetailedProject } from './generator';
 const upload = multer();
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '50mb' })); // Increase limit for binary photo data
-app.use(express.urlencoded({ limit: '50mb' }));
+app.use(express.json({ limit: '100mb' })); // Increase limit for binary photo data
+app.use(express.urlencoded({ limit: '100mb' }));
 
 // New JSON API endpoint
 app.post('/api/generate', upload.single('photo'), async (req, res) => {
@@ -172,25 +172,29 @@ app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
         photoBuffer = Buffer.from(body.photo, 'base64');
       }
     } else {
-      name = (req.body.name || '').toString();
-      title = req.body.title ? (req.body.title || '').toString() : undefined;
-      summary = (req.body.summary || '').toString();
-      education = req.body.education ? JSON.parse(req.body.education) : undefined;
-      methods = req.body.methods ? JSON.parse(req.body.methods) : undefined;
-      languages = req.body.languages ? JSON.parse(req.body.languages) : undefined;
-      expertise = req.body.expertise ? JSON.parse(req.body.expertise) : undefined;
-      industryKnowHow = req.body.industryKnowHow ? JSON.parse(req.body.industryKnowHow) : undefined;
-      itSkills = req.body.itSkills ? JSON.parse(req.body.itSkills) : undefined;
-      itTools = req.body.itTools ? JSON.parse(req.body.itTools) : undefined;
+      const body = req.body;
+      name = (body.name || '').toString();
+      title = body.title ? (body.title || '').toString() : undefined;
+      summary = (body.summary || '').toString();
+      education = body.education ? JSON.parse(body.education) : undefined;
+      methods = body.methods ? JSON.parse(body.methods) : undefined;
+      languages = body.languages ? JSON.parse(body.languages) : undefined;
+      expertise = body.expertise ? JSON.parse(body.expertise) : undefined;
+      industryKnowHow = body.industryKnowHow ? JSON.parse(body.industryKnowHow) : undefined;
+      itSkills = body.itSkills ? JSON.parse(body.itSkills) : undefined;
+      itTools = body.itTools ? JSON.parse(body.itTools) : undefined;
       
       try {
-        projects = JSON.parse(req.body.projects || '[]');
+        projects = JSON.parse(body.projects || '[]');
       } catch {
         projects = [];
       }
       
-      lang = (req.body.lang || 'en').toString();
-      photoBuffer = req.file?.buffer;
+      lang = (body.lang || 'en').toString();
+
+      if (body.photo) {
+        photoBuffer = Buffer.from(body.photo, 'base64');
+      }
     }
 
     // Generate HTML
