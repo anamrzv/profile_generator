@@ -3,29 +3,29 @@ import mustache from 'mustache';
 import puppeteer from 'puppeteer';
 
 export type DetailedProject = {
-    timeRange?: string; // e.g. "12/2024 – Present"
+    from?: string;
+    to?: string | null;
     name: string;
     industry?: string;
-    duration?: string; // e.g. "Ongoing", "6 months"
     role?: string;
     coreBusinessTopics?: string[];
-    projectMethods?: string[]; // methods used in the project (to avoid collision with global methods)
-    tools?: string[]; // technology/tools list
-    achievements?: string[]; // bullet points
+    projectMethods?: string[]; 
+    tools?: string[]; 
+    achievements?: string[]; 
 };
 
 export type CVInput = {
     name: string;
-    photo: Buffer; // binary photo data (JPEG or PNG)
-    title?: string; // job title / должность
+    photo: Buffer; // JPEG or PNG)
+    title?: string; 
     summary?: string;
     education?: string[];
     methods?: string[];
     languages?: string[];
     expertise?: string[];
     industryKnowHow?: string[];
-    itSkills?: string[]; // technical skills tags
-    itTools?: string[]; // tools tags
+    itSkills?: string[]; 
+    itTools?: string[]; 
     projects: DetailedProject[];
     out: string; // absolute path
     lang?: string; // 'en' | 'de'
@@ -85,12 +85,30 @@ export async function renderToString(input: Omit<CVInput, 'out'>): Promise<strin
     }
 
     const itSkills = input.itSkills;
+
+    const formatMonthYear = (iso?: string | null) => {
+        if (!iso) return undefined;
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return undefined;
+        const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const yyyy = d.getUTCFullYear();
+        return `${mm}/${yyyy}`;
+    };
+
     const normalizedProjects = (input.projects || []).map(p => {
-        const achievements = p.achievements && p.achievements.length > 0
-            ? p.achievements
-            : [];
-        return { 
-            ...p, 
+        const achievements = p.achievements && p.achievements.length > 0 ? p.achievements : [];
+
+        // Compute duration display if from/to provided
+        let computedDuration: string | undefined = undefined;
+        const fromFmt = formatMonthYear(p.from);
+        if (fromFmt) {
+            const toFmt = formatMonthYear(p.to) || 'ongoing';
+            computedDuration = `${fromFmt} - ${toFmt}`;
+        }
+
+        return {
+            ...p,
+            duration: computedDuration,
             achievements,
             hasAchievements: achievements && achievements.length > 0,
             hasCoreBusinessTopics: p.coreBusinessTopics && p.coreBusinessTopics.length > 0,
@@ -101,6 +119,7 @@ export async function renderToString(input: Omit<CVInput, 'out'>): Promise<strin
 
     const rendered = mustache.render(template, {
         name: input.name,
+        title: input.title,
         summary: input.summary,
         education: input.education,
         methods: input.methods,

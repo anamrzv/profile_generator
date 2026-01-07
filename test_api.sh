@@ -23,10 +23,10 @@ curl -X POST http://localhost:3000/api/generate/html \
     "projects": [
       {
         "name": "E-commerce Platform",
-        "timeRange": "2024 – Present",
+          "from": "2024-12-31T23:00:00.000Z",
+          "to": null,
         "role": "Lead Developer",
         "industry": "E-commerce",
-        "duration": "Ongoing",
         "tools": ["Docker", "Kubernetes", "AWS"],
         "coreBusinessTopics": "Test",
         "projectMethods": ["Scrum", "TDD"],
@@ -34,10 +34,10 @@ curl -X POST http://localhost:3000/api/generate/html \
       },
       {
         "name": "SAP Integration",
-        "timeRange": "2022 – 2023",
+          "from": "2024-01-01T00:00:00.000Z",
+          "to": "2025-11-23T23:00:00.000Z",
         "role": "Cloud Developer",
         "industry": "E-commerce",
-        "duration": "1.5 years",
         "tools": ["Docker", "Kubernetes", "AWS"],
         "coreBusinessTopics": "Test",
         "projectMethods": ["Scrum", "TDD"],
