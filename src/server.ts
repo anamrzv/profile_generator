@@ -6,10 +6,9 @@ import { renderToString, renderToPDF, DetailedProject } from './generator';
 const upload = multer();
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '100mb' })); // Increase limit for binary photo data
+app.use(express.json({ limit: '100mb' })); 
 app.use(express.urlencoded({ limit: '100mb' }));
 
-// New JSON API endpoint
 app.post('/api/generate', upload.single('photo'), async (req, res) => {
   try {
     let name: string;
@@ -26,9 +25,7 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
     let lang: string;
     let photoBuffer: Buffer | undefined;
 
-    // Check if request is JSON or multipart/form-data
     if (req.is('application/json')) {
-      // JSON request
       const body = req.body;
       name = body.name || '';
       title = body.title;
@@ -41,7 +38,6 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
       itSkills = body.itSkills;
       itTools = body.itTools;
       
-      // Normalize projects - handle stringified JSON in arrays (e.g., from n8n)
       let rawProjects = body.projects || [];
       if (Array.isArray(rawProjects) && rawProjects.length > 0 && typeof rawProjects[0] === 'string') {
         // If first element is a string, parse each element
@@ -58,7 +54,6 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
       
       lang = body.lang || 'en';
       
-      // For JSON, photo should be base64 encoded
       if (body.photo) {
         photoBuffer = Buffer.from(body.photo, 'base64');
       }
@@ -75,7 +70,6 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
       itSkills = req.body.itSkills ? JSON.parse(req.body.itSkills) : undefined;
       itTools = req.body.itTools ? JSON.parse(req.body.itTools) : undefined;
       
-      // Parse projects from JSON string
       try {
         projects = JSON.parse(req.body.projects || '[]');
       } catch {
@@ -84,9 +78,19 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
       
       lang = (req.body.lang || 'en').toString();
       photoBuffer = req.file?.buffer;
+
+      // Fallback: allow base64 photo sent as text field in multipart requests
+      if (!photoBuffer && req.body.photo) {
+        const raw = req.body.photo.toString();
+        const base64 = raw.includes('base64,') ? raw.split('base64,')[1] : raw;
+        try {
+          photoBuffer = Buffer.from(base64, 'base64');
+        } catch {
+          photoBuffer = undefined;
+        }
+      }
     }
 
-    // Generate HTML
     if (!photoBuffer) {
       res.status(400).json({ error: 'Photo is required' });
       return;
@@ -108,7 +112,6 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
       lang
     });
 
-    // Generate PDF by default
     const pdfBuffer = await renderToPDF(html);
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -120,7 +123,6 @@ app.post('/api/generate', upload.single('photo'), async (req, res) => {
   }
 });
 
-// Optional: Endpoint to generate HTML instead of PDF
 app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
   try {
     let name: string;
@@ -137,7 +139,6 @@ app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
     let lang: string;
     let photoBuffer: Buffer | undefined;
 
-    // Check if request is JSON or multipart/form-data
     if (req.is('application/json')) {
       const body = req.body;
       name = body.name || '';
@@ -151,10 +152,8 @@ app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
       itSkills = body.itSkills;
       itTools = body.itTools;
       
-      // Normalize projects - handle stringified JSON in arrays (e.g., from n8n)
       let rawProjects = body.projects || [];
       if (Array.isArray(rawProjects) && rawProjects.length > 0 && typeof rawProjects[0] === 'string') {
-        // If first element is a string, parse each element
         projects = rawProjects.map(p => {
           try {
             return typeof p === 'string' ? JSON.parse(p) : p;
@@ -192,12 +191,19 @@ app.post('/api/generate/html', upload.single('photo'), async (req, res) => {
       
       lang = (body.lang || 'en').toString();
 
-      if (body.photo) {
-        photoBuffer = Buffer.from(body.photo, 'base64');
+      photoBuffer = req.file?.buffer;
+
+      if (!photoBuffer && body.photo) {
+        const raw = body.photo.toString();
+        const base64 = raw.includes('base64,') ? raw.split('base64,')[1] : raw;
+        try {
+          photoBuffer = Buffer.from(base64, 'base64');
+        } catch {
+          photoBuffer = undefined;
+        }
       }
     }
 
-    // Generate HTML
     if (!photoBuffer) {
       res.status(400).json({ error: 'Photo is required' });
       return;
