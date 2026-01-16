@@ -180,20 +180,45 @@ function detectMimeType(buffer: Buffer): string {
 
 // Generate PDF from HTML string
 export async function renderToPDF(html: string): Promise<Buffer> {
-    const browser = await puppeteer.launch({
-        headless: true, args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox'
-        ],
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
-    });
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdfBuffer = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
-    });
-    await browser.close();
-    return Buffer.from(pdfBuffer);
+    let browser;
+    try {
+        browser = await puppeteer.launch({
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu'
+            ],
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+            timeout: 30000 // 30 second timeout for browser launch
+        });
+        
+        const page = await browser.newPage();
+        
+        page.setDefaultTimeout(20000); 
+        
+        await page.setContent(html, { waitUntil: 'networkidle0', timeout: 15000 });
+        
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' },
+            timeout: 20000 // 20 second timeout for PDF generation
+        });
+        
+        return Buffer.from(pdfBuffer);
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        throw error;
+    } finally {
+        // Always close browser
+        if (browser) {
+            try {
+                await browser.close();
+            } catch (closeError) {
+                console.error('Error closing browser:', closeError);
+            }
+        }
+    }
 }
