@@ -1,13 +1,9 @@
 #!/bin/bash
 
-# Test the new JSON API
-# Make sure the server is running with: npm run serve
-
-# Read the photo file and convert to base64
 PHOTO_BASE64=$(base64 -i assets/photo.png)
 
 
-curl -X POST http://localhost:3000/api/generate/html \
+curl -X POST http://localhost:3000/api/generate/docx \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Anna Munoz",
@@ -23,12 +19,12 @@ curl -X POST http://localhost:3000/api/generate/html \
     "projects": [
       {
         "name": "E-commerce Platform",
-          "from": "2024-12-31T23:00:00.000Z",
-          "to": null,
+        "from": "2024-12-31T23:00:00.000Z",
+        "to": null,
         "role": "Lead Developer",
         "industry": "E-commerce",
         "tools": ["Docker", "Kubernetes", "AWS"],
-        "coreBusinessTopics": "Test",
+        "coreBusinessTopics": ["Test"],
         "projectMethods": ["Scrum", "TDD"],
         "achievements": ["Led modernization initiative", "Reduced deployment time 40%"]
       },
@@ -39,7 +35,7 @@ curl -X POST http://localhost:3000/api/generate/html \
         "role": "Cloud Developer",
         "industry": "E-commerce",
         "tools": ["Docker", "Kubernetes", "AWS"],
-        "coreBusinessTopics": "Test",
+        "coreBusinessTopics": ["Test"],
         "projectMethods": ["Scrum", "TDD"],
         "achievements": ["Refactored legacy systems", "Transitioned to cloud infrastructure"]
       }
@@ -47,4 +43,14 @@ curl -X POST http://localhost:3000/api/generate/html \
     "lang": "en",
     "photo": "'"$PHOTO_BASE64"'"
   }' \
-  --output cv.html
+  --output out/cv.docx
+
+if [ $? -eq 0 ]; then
+  echo ""
+  echo "✓ DOCX generated successfully as cv.docx"
+  ls -lh out/cv.docx
+else
+  echo ""
+  echo "✗ Request failed or timed out"
+  exit 1
+fi

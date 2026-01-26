@@ -1,6 +1,7 @@
 out
 dist
 node_modules
-assets/
+assets/EA_photo.png
 cv.html
 cv.pdf
+docker/

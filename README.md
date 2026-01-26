@@ -1,14 +1,13 @@
 # Profile Generator
 
-A CLI tool and API server to generate professional CVs in PDF or HTML format.
+A CLI tool and API server to generate professional CVs in PDF, HTML, or DOCX format.
 
 ## Features
 
-- Generate CVs in PDF (default) or HTML format
-- REST API with JSON payload support
+- Generate CVs in PDF (default), HTML, or DOCX format
+- REST API with JSON and multipart/form-data support (file upload or base64 photo)
 - Customizable CV layout with photo, summary, IT skills, and projects
 - Multi-language support (English and German)
-- Modern, professional design
 
 ## Installation
 
@@ -25,20 +24,24 @@ npm run build
 npm run serve
 ```
 
-The server will start on `http://localhost:3000` (or the port specified in the `PORT` environment variable).
+The server will start on `http://localhost:3000` (or the port specified in the `PORT` environment variable). In Docker Compose, the default host port is `3111` (`HOST_PORT:CONTAINER_PORT` mapping).
 
 ### API Endpoints
 
 #### POST /api/generate
 
-mGenerates a CV in PDF format (default). The schema has been extended to support a 2-column first page and detailed multi-page projects. Legacy fields (`skills`, simple `projects` with `description`) remain supported and are auto-mapped.
+Generates a CV in PDF format (default). The schema has been extended to support a 2-column first page and detailed multi-page projects. 
+
+**Photo:**
+- JSON: provide `photo` as a **base64** string (optionally with `data:image/...;base64,` prefix)
+- multipart/form-data: provide `photo` as a **file field** (`-F "photo=@assets/photo.png"`)
 
 **New Schema (JSON):**
 
 ```jsonc
 {
   "name": "John Doe",
-  "photo": "<base64>",                // Optional base64 photo
+  "photo": "<base64>",               
   "summary": "Software Engineer 5+ years...",
   "education": ["B.Sc. Computer Science", "M.Sc. Data Engineering"],
   "methods": ["Scrum", "Agile Software Engineering"],
@@ -49,10 +52,10 @@ mGenerates a CV in PDF format (default). The schema has been extended to support
   "itTools": ["Jira/Confluence", "SAP BTP", "Docker", "GitHub Actions"],
   "projects": [
     {
-      "timeRange": "12/2024 – Present",
+      "from": "2024-12-31T23:00:00.000Z",
+      "to": "2025-12-31T23:00:00.000Z",
       "name": "Developing SAP applications",
       "industry": "SAP",
-      "duration": "Ongoing",
       "role": "SAP Cloud Native Developer",
       "coreBusinessTopics": ["Custom SAP applications", "Front-end/back-end integration"],
       "projectMethods": ["Scrum", "Agile Software Engineering"],
@@ -78,18 +81,13 @@ mGenerates a CV in PDF format (default). The schema has been extended to support
 - `industryKnowHow`: Industry domains experienced in.
 - `itSkills`: Programming languages / frameworks / core technical skills.
 - `itTools`: Tooling platforms and products.
-- `projects[]`: Detailed project pages (one page per project). Each supports:
-  - `timeRange`: Date range text.
-  - `industry`, `duration`, `role`: Meta descriptors.
+- `projects`: Detailed project pages (one page per project). Each supports:
+  - `from`, `to`: Date range.
+  - `industry`, `role`: Meta descriptors.
   - `coreBusinessTopics`: Business topic tags.
   - `projectMethods`: Methods used specifically in this project.
   - `tools`: Technology / tools for this project.
   - `achievements`: Bullet list of accomplishments.
-  - `description` (legacy): If provided and `achievements` absent, split by newline into achievements.
-
-**Legacy Compatibility:**
-- `skills` (string) is auto-split by comma/semicolon into `itSkills` if `itSkills` not provided.
-- Legacy `projects` items with only `name` + `description` are converted: description lines -> achievements.
 
 **Response:** PDF file (application/pdf).
 
@@ -99,9 +97,15 @@ Same as above, but generates HTML instead of PDF.
 
 **Response:** HTML file (text/html)
 
+#### POST /api/generate/docx
+
+Generates a CV in DOCX format using the same payload as `/api/generate`.
+
+**Response:** DOCX file (`application/vnd.openxmlformats-officedocument.wordprocessingml.document`).
+
 ### Example API Call
 
-Using cURL:
+Using cURL (JSON):
 
 ```bash
 curl -X POST http://localhost:3000/api/generate \
@@ -118,7 +122,8 @@ curl -X POST http://localhost:3000/api/generate \
     "itTools": ["Docker"],
     "projects": [
       {
-        "timeRange": "2024 – Present",
+        "from": "2024-12-31T23:00:00.000Z",
+        "to": "2025-12-31T23:00:00.000Z",
         "name": "Platform Modernization",
         "role": "Lead Developer",
         "achievements": ["Led modernization initiative", "Reduced deployment time 40%"]
@@ -133,6 +138,25 @@ curl -X POST http://localhost:3000/api/generate/html \
   -H "Content-Type: application/json" \
   -d '{"name":"John Doe","summary":"...","projects":[{"name":"Proj","description":"Line1\nLine2"}]}' \
   --output cv.html
+
+# DOCX output
+curl -X POST http://localhost:3000/api/generate/docx \
+  -H "Content-Type: application/json" \
+  -d '{"name":"John Doe","summary":"...","projects":[{"name":"Proj","description":"Line1\nLine2"}]}' \
+  --output cv.docx
+
+Using cURL (multipart/form-data with file photo):
+
+```bash
+curl -X POST http://localhost:3111/api/generate \
+  -F "name=John Doe" \
+  -F "summary=Software Engineer" \
+  -F "education=[\"B.Sc. Computer Science\"]" \
+  -F "projects=[{\"name\":\"Platform Modernization\",\"achievements\":[\"Led modernization\"]}]" \
+  -F "lang=en" \
+  -F "photo=@assets/photo.png" \
+  --output cv_formdata.pdf
+```
 ```
 
 See `test_api.sh` for a complete example with photo encoding.
@@ -151,55 +175,15 @@ npm run dev -- \
   -f pdf
 ```
 
-### CLI Options
-
-- `-n, --name <string>`: Full name (required)
-- `-p, --photo <path>`: Path to photo file (required)
-- `-s, --summary <string>`: Summary text (required)
-- `-k, --skills <string>`: IT skills (required)
-- `-j, --projects <path>`: Path to JSON file with projects array (required)
-- `-o, --out <path>`: Output file path (default: `./out/cv.pdf`)
-- `-l, --lang <code>`: Language code: en or de (default: `en`)
-- `-f, --format <format>`: Output format: pdf or html (default: `pdf`)
-
-### Projects JSON Format (Extended)
-
-CLI currently expects a path (`-j`) to a JSON file containing an array of project objects matching either the legacy or extended schema. Example extended file:
-
-```json
-[
-  {
-    "timeRange": "12/2024 – Present",
-    "name": "Developing SAP applications",
-    "industry": "SAP",
-    "role": "SAP Cloud Native Developer",
-    "achievements": [
-      "Developed SAP applications using Fiori, OData, and SAP BTP",
-      "Configured user authentication via SAP IAS"
-    ]
-  }
-]
-```
-
-## CV Format
-
-The generated CV follows this structure:
-
-1. **Header**: Name + Photo
-2. **Two-Column Overview**:
-  - Left (narrow): Education, Methods, Languages
-  - Right (wide): Summary, Areas of Expertise, Industry Know-How, IT Skills, IT Tools
-3. **Projects**: Each on its own page with meta rows and achievements bullets
-
 ## Docker
 
 Build and run with Docker:
 
 ```bash
-docker-compose up --build
+docker compose up --build profile-gen
 ```
 
-The API will be available at `http://localhost:3000`.
+The API will be available at `http://localhost:3111` by default (or the host port you map).
 
 ## Development
 

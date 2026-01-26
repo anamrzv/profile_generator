@@ -5,6 +5,8 @@ services:
     volumes:
       - ./out:/app/out
       - ./assets:/app/assets:ro
+    ports:
+      - "${HOST_PORT:-3111}:${CONTAINER_PORT:-3000}"
     environment:
       - NODE_ENV=production
       - PORT=${CONTAINER_PORT:-3000}

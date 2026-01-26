@@ -1,224 +1,232 @@
 import fs from 'fs-extra';
 import mustache from 'mustache';
-import puppeteer from 'puppeteer';
+import puppeteer, { Browser } from 'puppeteer';
+import path from 'path';
+import { CVInput, DetailedProject, Locale, Template } from './types';
+import { ImageService, DateFormatter, LocalizationService } from './util';
+import createReport from 'docx-templates/lib/main';
 
-export type DetailedProject = {
-    from?: string;
-    to?: string | null;
-    name: string;
-    industry?: string;
-    role?: string;
-    coreBusinessTopics?: string[];
-    projectMethods?: string[]; 
-    tools?: string[]; 
-    achievements?: string[]; 
-};
+class TemplateService {
+    private mustacheTemplate: string | null = null;
+    private docxTemplate: Buffer | null = null;
+    private stylesheet: string | null = null;
+    private readonly templateDir: string;
 
-export type CVInput = {
-    name: string;
-    photo: Buffer; // JPEG or PNG)
-    title?: string; 
-    summary?: string;
-    education?: string[];
-    methods?: string[];
-    languages?: string[];
-    expertise?: string[];
-    industryKnowHow?: string[];
-    itSkills?: string[]; 
-    itTools?: string[]; 
-    projects: DetailedProject[];
-    out: string; // absolute path
-    lang?: string; // 'en' | 'de'
-    format?: 'pdf' | 'html'; // default: 'pdf'
-};
-
-// Render to string without writing files. Photo is expected as binary Buffer data.
-export async function renderToString(input: Omit<CVInput, 'out'>): Promise<string> {
-    const template = await fs.readFile(require('path').join(__dirname, '..', 'template', 'cv.mustache'), 'utf8');
-    const css = await fs.readFile(require('path').join(__dirname, '..', 'template', 'style.css'), 'utf8');
-
-    const lang = (input.lang || 'en').toLowerCase();
-    const locales: Record<string, any> = {
-        en: {
-            summaryTitle: 'Summary',
-            educationTitle: 'Education',
-            methodsTitle: 'Methods',
-            languagesTitle: 'Languages',
-            expertiseTitle: 'Areas of Expertise',
-            industryKnowHowTitle: 'Industry Know-How',
-            itSkillsTitle: 'IT Skills',
-            itToolsTitle: 'IT Tools',
-            projectsTitle: 'Projects',
-            industryTitle: 'Industry',
-            durationTitle: 'Duration',
-            roleTitle: 'Role',
-            coreBusinessTopicsTitle: 'Core Business Topics',
-            toolsTitle: 'Technology/Tools',
-            achievementsTitle: 'Achievements:'
-        },
-        de: {
-            summaryTitle: 'Zusammenfassung',
-            educationTitle: 'Ausbildung',
-            methodsTitle: 'Methoden',
-            languagesTitle: 'Sprachen',
-            expertiseTitle: 'Expertise',
-            industryKnowHowTitle: 'Branchen-Know-how',
-            itSkillsTitle: 'IT-Kenntnisse',
-            itToolsTitle: 'IT-Werkzeuge',
-            projectsTitle: 'Projekte',
-            industryTitle: 'Branche',
-            durationTitle: 'Dauer',
-            roleTitle: 'Rolle',
-            coreBusinessTopicsTitle: 'Geschäftsthemen',
-            toolsTitle: 'Technologien/Werkzeuge',
-            achievementsTitle: 'Erfolge:'
-        }
-    };
-    const loc = locales[lang] || locales.en;
-
-    let photoRef = '';
-    if (input.photo) {
-        // Embed binary photo as data URL (detect format from buffer magic bytes)
-        const b64 = input.photo.toString('base64');
-        const mimeType = detectMimeType(input.photo);
-        photoRef = `data:${mimeType};base64,${b64}`;
+    constructor(templateDir: string = path.join(__dirname, '..', 'template')) {
+        this.templateDir = templateDir;
     }
 
-    const itSkills = input.itSkills;
-
-    const formatMonthYear = (iso?: string | null) => {
-        if (!iso) return undefined;
-        const d = new Date(iso);
-        if (isNaN(d.getTime())) return undefined;
-        const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-        const yyyy = d.getUTCFullYear();
-        return `${mm}/${yyyy}`;
-    };
-
-    const normalizedProjects = (input.projects || []).map(p => {
-        const achievements = p.achievements && p.achievements.length > 0 ? p.achievements : [];
-
-        // Compute duration display if from/to provided
-        let computedDuration: string | undefined = undefined;
-        const fromFmt = formatMonthYear(p.from);
-        if (fromFmt) {
-            const toFmt = formatMonthYear(p.to) || 'ongoing';
-            computedDuration = `${fromFmt} - ${toFmt}`;
+    async loadTemplate(type: 'mustache' | 'docx' = 'mustache'): Promise<Template> {
+        let templatePath: string;
+        if (type === 'mustache') {
+            if (this.mustacheTemplate === null) {
+                templatePath = path.join(this.templateDir, 'cv.mustache');
+                this.mustacheTemplate = await fs.readFile(templatePath, 'utf8');
+            }
+            return { mustache: this.mustacheTemplate, docx: undefined };
+        } else if (type === 'docx') {
+            if (this.docxTemplate === null) {
+                templatePath = path.join(this.templateDir, 'cv.docx');
+                this.docxTemplate = await fs.readFile(templatePath);
+            }
+            return { mustache: undefined, docx: this.docxTemplate };
         }
+        throw new Error(`Unsupported template type: ${type}`);
+    }
+
+    async loadStylesheet(): Promise<string> {
+        if (this.stylesheet === null) {
+            const stylePath = path.join(this.templateDir, 'style.css');
+            this.stylesheet = await fs.readFile(stylePath, 'utf8');
+        }
+        return this.stylesheet;
+    }
+}
+
+class ProjectNormalizer {
+    static normalize(projects: DetailedProject[]): any[] {
+        return (projects || []).map(project => this.normalizeProject(project));
+    }
+
+    private static normalizeProject(project: DetailedProject): any {
+        const achievements = project.achievements && project.achievements.length > 0
+            ? project.achievements
+            : [];
 
         return {
-            ...p,
-            duration: computedDuration,
+            ...project,
+            duration: DateFormatter.computeDuration(project.from, project.to),
             achievements,
-            hasAchievements: achievements && achievements.length > 0,
-            hasCoreBusinessTopics: p.coreBusinessTopics && p.coreBusinessTopics.length > 0,
-            hasProjectMethods: p.projectMethods && p.projectMethods.length > 0,
-            hasTools: p.tools && p.tools.length > 0
+            hasAchievements: achievements.length > 0,
+            hasCoreBusinessTopics: (project.coreBusinessTopics?.length ?? 0) > 0,
+            hasProjectMethods: (project.projectMethods?.length ?? 0) > 0,
+            hasTools: (project.tools?.length ?? 0) > 0
         };
-    });
-
-    const rendered = mustache.render(template, {
-        name: input.name,
-        title: input.title,
-        summary: input.summary,
-        education: input.education,
-        methods: input.methods,
-        languages: input.languages,
-        expertise: input.expertise,
-        industryKnowHow: input.industryKnowHow,
-        itSkills,
-        itTools: input.itTools,
-        projects: normalizedProjects,
-        photo: photoRef,
-        style: css,
-        hasEducation: input.education && input.education.length > 0,
-        hasMethods: input.methods && input.methods.length > 0,
-        hasLanguages: input.languages && input.languages.length > 0,
-        hasExpertise: input.expertise && input.expertise.length > 0,
-        hasIndustryKnowHow: input.industryKnowHow && input.industryKnowHow.length > 0,
-        hasItSkills: itSkills && itSkills.length > 0,
-        hasItTools: input.itTools && input.itTools.length > 0,
-        summaryTitle: loc.summaryTitle,
-        educationTitle: loc.educationTitle,
-        methodsTitle: loc.methodsTitle,
-        languagesTitle: loc.languagesTitle,
-        expertiseTitle: loc.expertiseTitle,
-        industryKnowHowTitle: loc.industryKnowHowTitle,
-        itSkillsTitle: loc.itSkillsTitle,
-        itToolsTitle: loc.itToolsTitle,
-        projectsTitle: loc.projectsTitle,
-        industryTitle: loc.industryTitle,
-        durationTitle: loc.durationTitle,
-        roleTitle: loc.roleTitle,
-        coreBusinessTopicsTitle: loc.coreBusinessTopicsTitle,
-        toolsTitle: loc.toolsTitle,
-        achievementsTitle: loc.achievementsTitle
-    });
-
-    return rendered;
+    }
 }
 
-// Detect MIME type from buffer magic bytes
-function detectMimeType(buffer: Buffer): string {
-    if (buffer.length < 4) {
-        return 'image/png'; // default fallback
-    }
-    
-    // Check for JPEG magic bytes (FF D8 FF)
-    if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
-        return 'image/jpeg';
-    }
-    
-    // Check for PNG magic bytes (89 50 4E 47)
-    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
-        return 'image/png';
-    }
-    
-    // Default to PNG if unknown
-    return 'image/png';
-}
 
-// Generate PDF from HTML string
-export async function renderToPDF(html: string): Promise<Buffer> {
-    let browser;
-    try {
-        browser = await puppeteer.launch({
-            headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu'
-            ],
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-            timeout: 30000 // 30 second timeout for browser launch
-        });
-        
-        const page = await browser.newPage();
-        
-        page.setDefaultTimeout(20000); 
-        
-        await page.setContent(html, { waitUntil: 'networkidle0', timeout: 15000 });
-        
-        const pdfBuffer = await page.pdf({
-            format: 'A4',
-            printBackground: true,
-            margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' },
-            timeout: 20000 // 20 second timeout for PDF generation
-        });
-        
-        return Buffer.from(pdfBuffer);
-    } catch (error) {
-        console.error('Error generating PDF:', error);
-        throw error;
-    } finally {
-        // Always close browser
-        if (browser) {
+class BrowserService {
+    private static readonly PUPPETEER_CONFIG = {
+        headless: true as const,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu'
+        ],
+        timeout: 30000
+    };
+
+    private static readonly TIMEOUTS = {
+        launch: 30000,
+        pageOperation: 20000,
+        contentLoad: 15000,
+        pdf: 20000
+    };
+
+    private browser: Browser | null = null;
+
+    private async ensureBrowser(): Promise<Browser> {
+        if (!this.browser) {
+            this.browser = await puppeteer.launch({
+                ...BrowserService.PUPPETEER_CONFIG,
+                executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
+            });
+        }
+        return this.browser;
+    }
+
+    async generatePDF(html: string): Promise<Buffer> {
+        let browser;
+        try {
+            browser = await this.ensureBrowser();
+            const page = await browser.newPage();
+
+            page.setDefaultTimeout(BrowserService.TIMEOUTS.pageOperation);
+            await page.setContent(html, {
+                waitUntil: 'networkidle0',
+                timeout: BrowserService.TIMEOUTS.contentLoad
+            });
+
+            const pdfBuffer = await page.pdf({
+                format: 'A4',
+                printBackground: true,
+                margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' },
+                timeout: BrowserService.TIMEOUTS.pdf
+            });
+
+            await this.close();
+            return Buffer.from(pdfBuffer);
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            await this.close();
+            throw error;
+        }
+    }
+
+    async close(): Promise<void> {
+        if (this.browser) {
             try {
-                await browser.close();
-            } catch (closeError) {
-                console.error('Error closing browser:', closeError);
+                await this.browser.close();
+                this.browser = null;
+            } catch (error) {
+                console.error('Error closing browser:', error);
             }
         }
+    }
+}
+
+class TemplateContextBuilder {
+    private readonly input: Omit<CVInput, 'out'>;
+    private readonly locale: Locale;
+
+    constructor(input: Omit<CVInput, 'out'>, locale: Locale) {
+        this.input = input;
+        this.locale = locale;
+    }
+
+    build(stylesheet: string): any {
+        return {
+            name: this.input.name,
+            title: this.input.title,
+            summary: this.input.summary,
+            photo: ImageService.toDataUrl(this.input.photo),
+            photoRaw: this.input.photo,
+            style: stylesheet,
+
+            education: this.input.education,
+            methods: this.input.methods,
+            languages: this.input.languages,
+            expertise: this.input.expertise,
+            industryKnowHow: this.input.industryKnowHow,
+            itSkills: this.input.itSkills,
+            itTools: this.input.itTools,
+            projects: ProjectNormalizer.normalize(this.input.projects),
+
+            hasEducation: this.hasContent(this.input.education),
+            hasMethods: this.hasContent(this.input.methods),
+            hasLanguages: this.hasContent(this.input.languages),
+            hasExpertise: this.hasContent(this.input.expertise),
+            hasIndustryKnowHow: this.hasContent(this.input.industryKnowHow),
+            hasItSkills: this.hasContent(this.input.itSkills),
+            hasItTools: this.hasContent(this.input.itTools),
+
+            ...this.locale
+        };
+    }
+
+    private hasContent(array?: string[]): boolean {
+        return (array?.length ?? 0) > 0;
+    }
+}
+
+export class CVGenerator {
+    private readonly templateService: TemplateService;
+    private readonly browserService: BrowserService;
+
+    constructor(templateDir?: string) {
+        this.templateService = new TemplateService(templateDir);
+        this.browserService = new BrowserService();
+    }
+
+    async generateHTML(input: Omit<CVInput, 'out'>): Promise<string> {
+        const template: Template = await this.templateService.loadTemplate();
+        const stylesheet = await this.templateService.loadStylesheet();
+        const locale = LocalizationService.getLocale(input.lang);
+
+        const contextBuilder = new TemplateContextBuilder(input, locale);
+        const context = contextBuilder.build(stylesheet);
+
+        return mustache.render(template.mustache!, context);
+    }
+
+    async generatePDF(input: Omit<CVInput, 'out'>): Promise<Buffer> {
+        const html = await this.generateHTML(input);
+        return await this.browserService.generatePDF(html);
+    }
+
+    async generateDocx(input: Omit<CVInput, 'out'>): Promise<Buffer> {
+        const template: Template = await this.templateService.loadTemplate('docx');
+        const locale = LocalizationService.getLocale(input.lang);
+        const contextBuilder = new TemplateContextBuilder(input, locale);
+        const context = contextBuilder.build('');
+
+        const buffer: Uint8Array = await createReport({
+            template: template.docx!,
+            data: context,
+            additionalJsContext: {
+                injectPhoto: (photoBuffer: Buffer) => {
+                    let extension: string = ImageService.detectMimeType(photoBuffer) == 'image/jpeg' ? '.jpeg' : '.png';
+                    return { width: 6, height: 6, data: photoBuffer, extension: extension };    
+                }
+            }
+        });
+
+        return Buffer.from(buffer);
+    }
+
+    async close(): Promise<void> {
+        await this.browserService.close();
     }
 }
