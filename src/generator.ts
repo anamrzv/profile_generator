@@ -26,7 +26,7 @@ class TemplateService {
             return { mustache: this.mustacheTemplate, docx: undefined };
         } else if (type === 'docx') {
             if (this.docxTemplate === null) {
-                templatePath = path.join(this.templateDir, 'cv.docx');
+                templatePath = path.join(this.templateDir, 'cv_new.docx');
                 this.docxTemplate = await fs.readFile(templatePath);
             }
             return { mustache: undefined, docx: this.docxTemplate };
@@ -218,7 +218,7 @@ export class CVGenerator {
             additionalJsContext: {
                 injectPhoto: (photoBuffer: Buffer) => {
                     let extension: string = ImageService.detectMimeType(photoBuffer) == 'image/jpeg' ? '.jpeg' : '.png';
-                    return { width: 6, height: 6, data: photoBuffer, extension: extension };    
+                    return { width: 5, height: 5, data: photoBuffer, extension: extension };    
                 }
             }
         });
