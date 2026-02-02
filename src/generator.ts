@@ -149,6 +149,8 @@ class TemplateContextBuilder {
     build(stylesheet: string): any {
         return {
             name: this.input.name,
+            firstName: this.input.name.split(' ')[0],
+            secondName: this.input.name.split(' ')[1],
             title: this.input.title,
             summary: this.input.summary,
             photo: ImageService.toDataUrl(this.input.photo),
