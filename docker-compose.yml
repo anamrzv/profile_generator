@@ -2,6 +2,7 @@ version: '3.8'
 services:
   profile-gen:
     build: .
+    restart: unless-stopped
     volumes:
       - ./out:/app/out
       - ./assets:/app/assets:ro
